@@ -19,7 +19,12 @@ export default function AdminLogin({ onSuccess }) {
       localStorage.setItem('admin_token', data.token);
       onSuccess();
     } catch (err) {
-      setError(err.response?.data?.error || 'Mot de passe incorrect');
+      // Vercel peut retourner { error: { code, message } } — s'assurer que c'est une string
+      const raw = err.response?.data?.error;
+      const msg = typeof raw === 'string'
+        ? raw
+        : (raw?.message || (err.response?.status === 404 ? 'Serveur non disponible' : 'Mot de passe incorrect'));
+      setError(String(msg));
     } finally {
       setLoading(false);
     }

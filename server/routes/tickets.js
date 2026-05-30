@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
@@ -8,148 +7,96 @@ const JSZip = require('jszip');
 const pool = require('../db');
 
 const uploadsDir = path.join(__dirname, '../../public/uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: uploadsDir,
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, 'ticket-template' + ext);
-  },
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 15 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const allowed = ['.jpg', '.jpeg', '.png'];
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (allowed.includes(ext)) cb(null, true);
-    else cb(new Error('Format non supporté. Utilisez JPG ou PNG.'));
-  },
-});
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 const configPath = path.join(uploadsDir, 'ticket-config.json');
 
 const getConfig = () => {
-  if (fs.existsSync(configPath)) {
-    try {
-      return JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    } catch {
-      return null;
-    }
-  }
-  return null;
+  if (!fs.existsSync(configPath)) return null;
+  try { return JSON.parse(fs.readFileSync(configPath, 'utf8')); } catch { return null; }
 };
 
-// POST upload template
-router.post('/upload', upload.single('template'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'Aucun fichier reçu' });
+// POST upload — accepts base64 JSON (compatible with Vercel functions)
+router.post('/upload', (req, res) => {
+  try {
+    const { base64, mime } = req.body || {};
+    if (!base64 || !mime) return res.status(400).json({ error: 'Données manquantes' });
+
+    if (!['image/jpeg', 'image/jpg', 'image/png'].includes(mime)) {
+      return res.status(400).json({ error: 'Format non supporté (JPG/PNG requis)' });
+    }
+
+    const ext = mime.includes('png') ? '.png' : '.jpg';
+    const filename = 'ticket-template' + ext;
+    const templatePath = path.join(uploadsDir, filename);
+
+    // Remove old templates
+    ['.jpg', '.jpeg', '.png'].forEach(e => {
+      const old = path.join(uploadsDir, 'ticket-template' + e);
+      if (old !== templatePath && fs.existsSync(old)) fs.unlinkSync(old);
+    });
+
+    fs.writeFileSync(templatePath, Buffer.from(base64, 'base64'));
+
+    const cfg = getConfig() || {};
+    cfg.templateFile = filename;
+    fs.writeFileSync(configPath, JSON.stringify(cfg, null, 2));
+
+    res.json({ success: true, filename, url: `/uploads/${filename}` });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur upload' });
   }
-
-  // Remove old template files (different ext)
-  const exts = ['.jpg', '.jpeg', '.png'];
-  exts.forEach((ext) => {
-    const old = path.join(uploadsDir, 'ticket-template' + ext);
-    if (old !== req.file.path && fs.existsSync(old)) fs.unlinkSync(old);
-  });
-
-  // Update config with new template file
-  const existingConfig = getConfig() || {};
-  existingConfig.templateFile = req.file.filename;
-  fs.writeFileSync(configPath, JSON.stringify(existingConfig, null, 2));
-
-  res.json({
-    success: true,
-    filename: req.file.filename,
-    url: `/uploads/${req.file.filename}`,
-  });
 });
 
 // GET config
 router.get('/config', (req, res) => {
-  const config = getConfig();
-  res.json(config || {});
+  const cfg = getConfig();
+  if (!cfg) return res.json({});
+  const tplPath = cfg.templateFile ? path.join(uploadsDir, cfg.templateFile) : null;
+  const hasTemplate = !!(tplPath && fs.existsSync(tplPath));
+  res.json({ ...cfg, hasTemplate });
 });
 
-// POST save config (rectangle + style)
+// POST save config
 router.post('/config', (req, res) => {
-  const { nameRect, fontSize, fontColor, fontWeight, textAlign, templateFile } = req.body;
-
-  if (!nameRect) {
-    return res.status(400).json({ error: 'Configuration incomplète' });
-  }
-
-  const config = {
-    templateFile: templateFile || (getConfig() || {}).templateFile,
-    nameRect,
-    fontSize: fontSize || 32,
-    fontColor: fontColor || '#000000',
-    fontWeight: fontWeight || 'bold',
-    textAlign: textAlign || 'center',
-  };
-
-  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+  const { nameRect, fontSize, fontColor } = req.body || {};
+  if (!nameRect) return res.status(400).json({ error: 'Configuration incomplète' });
+  const cfg = { ...(getConfig() || {}), nameRect, fontSize: fontSize || 32, fontColor: fontColor || '#000000' };
+  fs.writeFileSync(configPath, JSON.stringify(cfg, null, 2));
   res.json({ success: true });
 });
 
-// GET generate ticket for one person
-router.get('/generate/:id', async (req, res) => {
-  try {
-    const config = getConfig();
-    if (!config || !config.templateFile || !config.nameRect) {
-      return res.status(400).json({ error: 'Template ou configuration manquant' });
-    }
-
-    const result = await pool.query(
-      'SELECT * FROM reservations WHERE id = $1',
-      [req.params.id]
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Invité non trouvé' });
-    }
-
-    const person = result.rows[0];
-    const pdfBytes = await generateTicketPDF(person, config);
-
-    const filename = `billet-${person.prenom}-${person.nom}.pdf`
-      .replace(/[^a-z0-9-_.]/gi, '-');
-
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send(Buffer.from(pdfBytes));
-  } catch (err) {
-    console.error('Erreur génération ticket:', err);
-    res.status(500).json({ error: err.message || 'Erreur de génération' });
-  }
+// GET template image (authenticated, served from filesystem)
+router.get('/template', (req, res) => {
+  const cfg = getConfig();
+  if (!cfg?.templateFile) return res.status(404).json({ error: 'Template non trouvé' });
+  const tplPath = path.join(uploadsDir, cfg.templateFile);
+  if (!fs.existsSync(tplPath)) return res.status(404).json({ error: 'Template non trouvé' });
+  res.sendFile(path.resolve(tplPath));
 });
 
-// GET preview ticket (inline display)
-router.get('/preview/:id', async (req, res) => {
+// GET generate one ticket
+router.get('/generate/:id', async (req, res) => {
   try {
-    const config = getConfig();
-    if (!config || !config.templateFile || !config.nameRect) {
+    const cfg = getConfig();
+    if (!cfg?.nameRect || !cfg?.templateFile) {
       return res.status(400).json({ error: 'Configuration manquante' });
     }
+    const result = await pool.query('SELECT * FROM reservations WHERE id = $1', [req.params.id]);
+    if (!result.rows.length) return res.status(404).json({ error: 'Invité non trouvé' });
 
-    const result = await pool.query(
-      'SELECT * FROM reservations WHERE id = $1',
-      [req.params.id]
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Invité non trouvé' });
-    }
+    const tplPath = path.join(uploadsDir, cfg.templateFile);
+    if (!fs.existsSync(tplPath)) return res.status(400).json({ error: 'Template introuvable' });
 
+    const pdfBytes = await buildPDFFromFile(result.rows[0], cfg, tplPath);
     const person = result.rows[0];
-    const pdfBytes = await generateTicketPDF(person, config);
-
+    const fn = `billet-${person.prenom}-${person.nom}.pdf`.replace(/[^a-z0-9-_.]/gi, '-');
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('Content-Disposition', `attachment; filename="${fn}"`);
     res.send(Buffer.from(pdfBytes));
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -157,112 +104,66 @@ router.get('/preview/:id', async (req, res) => {
 // GET generate all tickets as ZIP
 router.get('/generate-all', async (req, res) => {
   try {
-    const config = getConfig();
-    if (!config || !config.templateFile || !config.nameRect) {
-      return res.status(400).json({ error: 'Template ou configuration manquant' });
+    const cfg = getConfig();
+    if (!cfg?.nameRect || !cfg?.templateFile) {
+      return res.status(400).json({ error: 'Configuration manquante' });
     }
 
-    const result = await pool.query(
-      'SELECT * FROM reservations ORDER BY nom, prenom'
-    );
+    const tplPath = path.join(uploadsDir, cfg.templateFile);
+    if (!fs.existsSync(tplPath)) return res.status(400).json({ error: 'Template introuvable' });
 
-    if (result.rows.length === 0) {
-      return res.status(400).json({ error: 'Aucun invité dans la base de données' });
-    }
+    const result = await pool.query('SELECT * FROM reservations ORDER BY nom, prenom');
+    if (!result.rows.length) return res.status(400).json({ error: 'Aucun invité' });
 
     const zip = new JSZip();
     const folder = zip.folder('billets-blinda-elvis');
 
     for (const person of result.rows) {
       try {
-        const pdfBytes = await generateTicketPDF(person, config);
-        const filename = `billet-${person.prenom}-${person.nom}.pdf`
-          .replace(/[^a-z0-9-_.]/gi, '-');
-        folder.file(filename, pdfBytes);
-      } catch (err) {
-        console.error(`Erreur pour ${person.prenom} ${person.nom}:`, err.message);
-      }
+        const pdfBytes = await buildPDFFromFile(person, cfg, tplPath);
+        const fn = `billet-${person.prenom}-${person.nom}.pdf`.replace(/[^a-z0-9-_.]/gi, '-');
+        folder.file(fn, pdfBytes);
+      } catch (e) { console.warn(`Skip ${person.prenom}: ${e.message}`); }
     }
 
-    const zipBuffer = await zip.generateAsync({
-      type: 'nodebuffer',
-      compression: 'DEFLATE',
-      compressionOptions: { level: 6 },
-    });
-
+    const zipBuf = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
     const now = new Date().toISOString().slice(0, 10);
     res.setHeader('Content-Type', 'application/zip');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="billets-mariage-blinda-elvis-${now}.zip"`
-    );
-    res.send(zipBuffer);
+    res.setHeader('Content-Disposition', `attachment; filename="billets-mariage-blinda-elvis-${now}.zip"`);
+    res.send(zipBuf);
   } catch (err) {
-    console.error('Erreur génération ZIP:', err);
-    res.status(500).json({ error: err.message || 'Erreur de génération' });
+    console.error(err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-async function generateTicketPDF(person, config) {
-  const { nameRect, fontSize = 32, fontColor = '#000000', templateFile } = config;
-
-  const templatePath = path.join(uploadsDir, templateFile);
-  if (!fs.existsSync(templatePath)) {
-    throw new Error(`Template introuvable: ${templateFile}`);
-  }
-
-  const templateBytes = fs.readFileSync(templatePath);
+async function buildPDFFromFile(person, cfg, tplPath) {
+  const { nameRect, fontSize = 32, fontColor = '#000000', templateFile } = cfg;
+  const imgBytes = fs.readFileSync(tplPath);
   const pdfDoc = await PDFDocument.create();
-
-  const ext = path.extname(templatePath).toLowerCase();
-  let templateImage;
-  if (ext === '.png') {
-    templateImage = await pdfDoc.embedPng(templateBytes);
-  } else {
-    templateImage = await pdfDoc.embedJpg(templateBytes);
-  }
-
-  const { width: imgW, height: imgH } = templateImage;
+  const ext = path.extname(tplPath).toLowerCase();
+  const img = ext === '.png' ? await pdfDoc.embedPng(imgBytes) : await pdfDoc.embedJpg(imgBytes);
+  const { width: imgW, height: imgH } = img;
   const page = pdfDoc.addPage([imgW, imgH]);
-
-  page.drawImage(templateImage, { x: 0, y: 0, width: imgW, height: imgH });
+  page.drawImage(img, { x: 0, y: 0, width: imgW, height: imgH });
 
   const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const fullName = `${person.prenom} ${person.nom}`;
-
-  // nameRect is stored as percentages (0-1) from top-left
   const rectX = nameRect.xPercent * imgW;
-  const rectY_top = nameRect.yPercent * imgH;
   const rectW = nameRect.widthPercent * imgW;
   const rectH = nameRect.heightPercent * imgH;
+  const rectYtop = nameRect.yPercent * imgH;
+  const fs2 = Math.min(fontSize, rectH * 0.6);
+  const tw = font.widthOfTextAtSize(fullName, fs2);
+  const pdfX = Math.max(rectX, rectX + (rectW - tw) / 2);
+  const pdfY = imgH - rectYtop - rectH / 2 - fs2 / 3;
 
-  // Scale font size relative to rect height
-  const scaledFontSize = Math.min(
-    fontSize,
-    rectH * 0.6
-  );
-
-  const textWidth = font.widthOfTextAtSize(fullName, scaledFontSize);
-
-  // Center text in rectangle (PDF Y is from bottom)
-  const centerX = rectX + (rectW - textWidth) / 2;
-  const pdfY = imgH - rectY_top - rectH / 2 - scaledFontSize / 3;
-
-  // Parse hex color
   const hex = fontColor.replace('#', '');
   const r = parseInt(hex.slice(0, 2), 16) / 255;
   const g = parseInt(hex.slice(2, 4), 16) / 255;
   const b = parseInt(hex.slice(4, 6), 16) / 255;
-
-  page.drawText(fullName, {
-    x: Math.max(rectX, centerX),
-    y: pdfY,
-    size: scaledFontSize,
-    font,
-    color: rgb(r, g, b),
-  });
-
-  return await pdfDoc.save();
+  page.drawText(fullName, { x: pdfX, y: pdfY, size: fs2, font, color: rgb(r, g, b) });
+  return pdfDoc.save();
 }
 
 module.exports = router;

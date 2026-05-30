@@ -5,7 +5,7 @@ import FloatingPetals from '../shared/FloatingPetals';
 import pagneDos from '../../assets/images/pagne-dos.jpeg';
 import couronne from '../../assets/images/couronne.jpeg';
 
-// ── Countdown component ────────────────────────────────────────────────────
+// ── Countdown ─────────────────────────────────────────────────────────────
 const TARGET = new Date('2026-06-20T08:30:00');
 
 function getTimeLeft() {
@@ -28,8 +28,7 @@ function CountdownBox({ value, label, delay, color }) {
       transition={{ type: 'spring', stiffness: 300, damping: 20, delay }}
     >
       <div
-        className="relative w-16 h-16 md:w-20 md:h-20 rounded-2xl flex items-center justify-center
-                   backdrop-blur-sm border shadow-lg overflow-hidden"
+        className="relative w-16 h-16 md:w-20 md:h-20 rounded-2xl flex items-center justify-center backdrop-blur-sm border overflow-hidden"
         style={{
           background: 'rgba(255,255,255,0.15)',
           borderColor: color === 'gold' ? 'rgba(245,158,11,0.5)' : 'rgba(14,165,233,0.5)',
@@ -38,7 +37,6 @@ function CountdownBox({ value, label, delay, color }) {
             : '0 0 20px rgba(14,165,233,0.3), inset 0 1px 0 rgba(255,255,255,0.2)',
         }}
       >
-        {/* Shimmer */}
         <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
         <motion.span
           key={value}
@@ -48,8 +46,8 @@ function CountdownBox({ value, label, delay, color }) {
           transition={{ duration: 0.3 }}
           style={{
             textShadow: color === 'gold'
-              ? '0 0 20px rgba(245,158,11,0.8)'
-              : '0 0 20px rgba(14,165,233,0.8)',
+              ? '0 0 20px rgba(245,158,11,0.9)'
+              : '0 0 20px rgba(14,165,233,0.9)',
           }}
         >
           {String(value).padStart(2, '0')}
@@ -88,89 +86,81 @@ function Countdown() {
   );
 }
 
-// ── Floating sparkle ───────────────────────────────────────────────────────
-function Sparkle({ x, y, size, delay }) {
+// ── Sparkle ───────────────────────────────────────────────────────────────
+function SparkleEl({ x, y, size, delay }) {
   return (
     <motion.div
-      className="absolute pointer-events-none"
+      className="absolute pointer-events-none z-10"
       style={{ left: `${x}%`, top: `${y}%` }}
       initial={{ opacity: 0, scale: 0 }}
       animate={{ opacity: [0, 1, 0], scale: [0, 1, 0], rotate: [0, 180, 360] }}
-      transition={{ duration: 2.5, delay, repeat: Infinity, repeatDelay: Math.random() * 3 }}
+      transition={{ duration: 2.5, delay, repeat: Infinity, repeatDelay: Math.random() * 3 + 1 }}
     >
-      <Sparkles size={size} className="text-gold-wed" style={{ filter: 'drop-shadow(0 0 6px #F59E0B)' }} />
+      <Sparkles size={size} style={{ color: '#F59E0B', filter: 'drop-shadow(0 0 6px #F59E0B)' }} />
     </motion.div>
   );
 }
 
 const SPARKLES = [
-  { x: 15, y: 20, size: 12, delay: 0 },
-  { x: 80, y: 15, size: 16, delay: 0.8 },
-  { x: 90, y: 70, size: 10, delay: 1.5 },
-  { x: 10, y: 75, size: 14, delay: 2.2 },
-  { x: 50, y: 5, size: 12, delay: 0.4 },
-  { x: 70, y: 85, size: 18, delay: 1.2 },
-  { x: 25, y: 90, size: 10, delay: 2.8 },
-  { x: 60, y: 30, size: 14, delay: 3.2 },
+  { x: 12, y: 18, size: 12, delay: 0 }, { x: 82, y: 12, size: 16, delay: 0.8 },
+  { x: 88, y: 72, size: 10, delay: 1.5 }, { x: 8, y: 78, size: 14, delay: 2.2 },
+  { x: 55, y: 6, size: 12, delay: 0.4 }, { x: 72, y: 88, size: 18, delay: 1.2 },
 ];
 
 // ── Hero ───────────────────────────────────────────────────────────────────
 export default function Hero() {
-  const ref = useRef(null);
-  const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] });
-  const bgY = useTransform(scrollYProgress, [0, 1], ['0%', '25%']);
-  const contentY = useTransform(scrollYProgress, [0, 1], ['0%', '15%']);
-  const opacity = useTransform(scrollYProgress, [0, 0.7], [1, 0]);
+  // Parallax uniquement sur l'image de fond (via window scroll — pas de ref nécessaire)
+  const { scrollY } = useScroll();
+  const bgY = useTransform(scrollY, [0, 700], ['0%', '20%']);
 
-  const scrollToNext = () => document.getElementById('programme')?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToNext = () =>
+    document.getElementById('programme')?.scrollIntoView({ behavior: 'smooth' });
 
   return (
     <section
       id="accueil"
-      ref={ref}
       className="relative min-h-screen flex items-center justify-center overflow-hidden"
+      // position: relative est déjà fourni par 'relative' de Tailwind
     >
-      {/* ── Background image with Ken Burns + parallax ── */}
-      <motion.div className="absolute inset-0 z-0" style={{ y: bgY }}>
+      {/* ── Background avec parallax ── */}
+      <motion.div
+        className="absolute inset-0 z-0"
+        style={{ y: bgY }}
+      >
         <img
           src={pagneDos}
           alt="Blinda et Elvis"
           className="w-full h-full object-cover object-center ken-burns-bg"
           style={{ minHeight: '120%' }}
         />
-        {/* Gradient overlay — bright left, transparent right */}
+        {/* Overlay sombre pour lisibilité */}
         <div
           className="absolute inset-0"
           style={{
-            background: 'linear-gradient(to right, rgba(30,27,75,0.85) 0%, rgba(30,27,75,0.7) 30%, rgba(30,27,75,0.4) 60%, rgba(30,27,75,0.2) 100%)',
+            background:
+              'linear-gradient(to right, rgba(30,27,75,0.88) 0%, rgba(30,27,75,0.72) 35%, rgba(30,27,75,0.45) 65%, rgba(30,27,75,0.2) 100%)',
           }}
         />
-        {/* Bottom fade */}
+        {/* Fondu bas pour transition douce vers la section suivante */}
         <div
-          className="absolute inset-x-0 bottom-0 h-40"
+          className="absolute inset-x-0 bottom-0 h-40 pointer-events-none"
           style={{ background: 'linear-gradient(to top, #FDF8F0, transparent)' }}
         />
-        {/* Color tint overlay (vivid blue-gold gradient) */}
+        {/* Tint coloré */}
         <div
-          className="absolute inset-0 mix-blend-overlay opacity-30"
-          style={{
-            background: 'linear-gradient(135deg, #0EA5E9 0%, transparent 50%, #F59E0B 100%)',
-          }}
+          className="absolute inset-0 mix-blend-overlay opacity-25 pointer-events-none"
+          style={{ background: 'linear-gradient(135deg, #0EA5E9 0%, transparent 50%, #F59E0B 100%)' }}
         />
       </motion.div>
 
-      {/* ── Floating petals ── */}
-      <FloatingPetals count={22} />
+      {/* ── Éléments de décor ── */}
+      <FloatingPetals count={20} />
+      {SPARKLES.map((s, i) => <SparkleEl key={i} {...s} />)}
 
-      {/* ── Sparkles ── */}
-      {SPARKLES.map((s, i) => <Sparkle key={i} {...s} />)}
+      {/* ── Contenu principal — PAS de fade-out au scroll ── */}
+      <div className="relative z-10 w-full max-w-5xl mx-auto px-4 text-center flex flex-col items-center gap-6 pt-20 pb-16">
 
-      {/* ── Content ── */}
-      <motion.div
-        className="relative z-10 w-full max-w-5xl mx-auto px-4 text-center flex flex-col items-center gap-6 pt-20 pb-16"
-        style={{ y: contentY, opacity }}
-      >
-        {/* Save the Date badge */}
+        {/* Badge Save the Date */}
         <motion.div
           className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-xs uppercase tracking-[0.3em] font-body backdrop-blur-sm border"
           style={{
@@ -196,14 +186,13 @@ export default function Hero() {
           />
         </motion.div>
 
-        {/* Couple photo ring */}
+        {/* Photo du couple */}
         <motion.div
           className="relative"
           initial={{ opacity: 0, scale: 0.6 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 1.2, delay: 0.3, type: 'spring', stiffness: 150, damping: 15 }}
         >
-          {/* Animated glow rings */}
           <motion.div
             className="absolute inset-0 -m-6 rounded-full"
             style={{ border: '2px solid rgba(245,158,11,0.3)' }}
@@ -216,10 +205,8 @@ export default function Hero() {
             animate={{ rotate: -360 }}
             transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
           />
-          {/* Glow pulse */}
           <motion.div
-            className="absolute inset-0 rounded-full"
-            style={{ boxShadow: '0 0 60px rgba(245,158,11,0.4)' }}
+            className="absolute inset-0 rounded-full pointer-events-none"
             animate={{ boxShadow: [
               '0 0 30px rgba(245,158,11,0.3)',
               '0 0 70px rgba(245,158,11,0.6)',
@@ -227,8 +214,6 @@ export default function Hero() {
             ]}}
             transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
           />
-
-          {/* Photo */}
           <div
             className="w-48 h-48 md:w-60 md:h-60 rounded-full overflow-hidden relative"
             style={{
@@ -243,8 +228,6 @@ export default function Hero() {
             />
             <div className="absolute inset-0 rounded-full bg-gradient-to-t from-wed-dark/30 to-transparent" />
           </div>
-
-          {/* Date badge */}
           <motion.div
             className="absolute -bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap px-4 py-1.5 rounded-full text-[10px] font-body tracking-widest uppercase backdrop-blur-sm"
             style={{
@@ -260,7 +243,7 @@ export default function Hero() {
           </motion.div>
         </motion.div>
 
-        {/* Names */}
+        {/* Noms */}
         <motion.div
           className="mt-4"
           initial={{ opacity: 0, y: 20 }}
@@ -270,14 +253,15 @@ export default function Hero() {
           <h1
             className="font-script text-7xl md:text-9xl text-white leading-none"
             style={{
-              textShadow: '0 0 40px rgba(245,158,11,0.7), 0 0 80px rgba(245,158,11,0.3), 0 4px 20px rgba(0,0,0,0.4)',
+              textShadow:
+                '0 0 40px rgba(245,158,11,0.7), 0 0 80px rgba(245,158,11,0.3), 0 4px 20px rgba(0,0,0,0.4)',
             }}
           >
             Blinda & Elvis
           </h1>
         </motion.div>
 
-        {/* Theme */}
+        {/* Thème */}
         <motion.div
           className="space-y-2"
           initial={{ opacity: 0, y: 10 }}
@@ -297,14 +281,17 @@ export default function Hero() {
           >
             🌿✨ Le Jardin de Paix et de Joie ✨🌿
           </p>
-          <p className="font-body text-white/75 text-sm md:text-base max-w-lg mx-auto leading-relaxed"
-            style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
-            Parce que l'amour est une fleur qui grandit avec la paix,<br className="hidden sm:block" />
+          <p
+            className="font-body text-white/75 text-sm md:text-base max-w-lg mx-auto leading-relaxed"
+            style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
+          >
+            Parce que l'amour est une fleur qui grandit avec la paix,
+            <br className="hidden sm:block" />
             la confiance et la bénédiction de Dieu
           </p>
         </motion.div>
 
-        {/* Separator */}
+        {/* Séparateur */}
         <motion.div
           className="flex items-center gap-3 w-full max-w-sm"
           initial={{ opacity: 0, scaleX: 0 }}
@@ -316,10 +303,10 @@ export default function Hero() {
           <div className="flex-1 h-px bg-gradient-to-l from-transparent to-gold-wed/60" />
         </motion.div>
 
-        {/* Countdown */}
+        {/* Compte à rebours */}
         <Countdown />
 
-        {/* CTAs */}
+        {/* Boutons CTA */}
         <motion.div
           className="flex flex-col sm:flex-row gap-4"
           initial={{ opacity: 0, y: 20 }}
@@ -339,7 +326,7 @@ export default function Hero() {
           <motion.a
             href="#programme"
             onClick={e => { e.preventDefault(); document.getElementById('programme')?.scrollIntoView({ behavior: 'smooth' }); }}
-            className="relative backdrop-blur-sm border-2 border-white/40 text-white font-body font-bold px-8 py-3.5 rounded-full transition-all duration-300 hover:bg-white/10 text-sm uppercase tracking-widest"
+            className="backdrop-blur-sm border-2 border-white/40 text-white font-body font-bold px-8 py-3.5 rounded-full transition-all duration-300 hover:bg-white/10 text-sm uppercase tracking-widest"
             style={{ textShadow: '0 1px 4px rgba(0,0,0,0.4)' }}
             whileHover={{ scale: 1.06, y: -2 }}
             whileTap={{ scale: 0.96 }}
@@ -348,7 +335,7 @@ export default function Hero() {
           </motion.a>
         </motion.div>
 
-        {/* Quote */}
+        {/* Citation */}
         <motion.p
           className="font-heading italic text-white/50 text-sm"
           style={{ textShadow: '0 1px 4px rgba(0,0,0,0.4)' }}
@@ -358,21 +345,22 @@ export default function Hero() {
         >
           « Ce sera un jour d'amour, de partage, d'émotions et de bénédictions »
         </motion.p>
-      </motion.div>
+      </div>
 
-      {/* Scroll indicator */}
+      {/* Indicateur de défilement */}
       <motion.button
         onClick={scrollToNext}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10"
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-1"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1, y: [0, 10, 0] }}
         transition={{ opacity: { delay: 2 }, y: { duration: 1.8, repeat: Infinity, ease: 'easeInOut' } }}
-        aria-label="Défiler"
+        aria-label="Défiler vers le bas"
       >
-        <div className="flex flex-col items-center gap-1">
-          <span className="text-white/30 text-xs uppercase tracking-widest font-body">Défiler</span>
-          <ChevronDown size={28} className="text-gold-wed" style={{ filter: 'drop-shadow(0 0 8px rgba(245,158,11,0.8))' }} />
-        </div>
+        <span className="text-white/30 text-xs uppercase tracking-widest font-body">Défiler</span>
+        <ChevronDown
+          size={28}
+          style={{ color: '#F59E0B', filter: 'drop-shadow(0 0 8px rgba(245,158,11,0.8))' }}
+        />
       </motion.button>
     </section>
   );
