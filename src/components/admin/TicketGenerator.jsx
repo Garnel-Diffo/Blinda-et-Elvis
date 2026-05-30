@@ -174,14 +174,36 @@ export default function TicketGenerator() {
     } finally { setSaving(false); }
   };
 
+  // Parse une erreur dont le body est un Blob (réponse 500 en responseType:'blob')
+  const parseBlobError = async (err, fallback) => {
+    const blobData = err?.response?.data;
+    if (blobData instanceof Blob) {
+      try {
+        const text = await blobData.text();
+        const json = JSON.parse(text);
+        const raw = json?.error;
+        return typeof raw === 'string' ? raw : (raw?.message || fallback);
+      } catch { return fallback; }
+    }
+    return extractError(err, fallback);
+  };
+
   const handleGenerateOne = async (guest) => {
     setGeneratingId(guest.id);
     try {
-      const { data } = await generateTicket(guest.id);
-      saveAs(new Blob([data], { type: 'application/pdf' }), `billet-${guest.prenom}-${guest.nom}.pdf`);
-      toast.success(`Billet généré pour ${guest.prenom} ${guest.nom}`);
+      const response = await generateTicket(guest.id);
+      const ct = response.headers?.['content-type'] || '';
+      if (ct.includes('application/pdf')) {
+        saveAs(response.data, `billet-${guest.prenom}-${guest.nom}.pdf`);
+        toast.success(`Billet généré pour ${guest.prenom} ${guest.nom}`);
+      } else {
+        // La réponse est un JSON d'erreur enveloppé en Blob
+        let msg = 'Erreur de génération';
+        try { const t = await response.data.text(); msg = JSON.parse(t).error || msg; } catch {}
+        toast.error(msg);
+      }
     } catch (err) {
-      toast.error(extractError(err, 'Erreur de génération'));
+      toast.error(await parseBlobError(err, 'Erreur de génération'));
     } finally { setGeneratingId(null); }
   };
 
@@ -189,12 +211,19 @@ export default function TicketGenerator() {
     if (!guests.length) { toast.error('Aucun invité dans la base de données'); return; }
     setGeneratingAll(true);
     try {
-      const { data } = await generateAllTickets();
-      const now = new Date().toISOString().slice(0, 10);
-      saveAs(new Blob([data], { type: 'application/zip' }), `billets-mariage-blinda-elvis-${now}.zip`);
-      toast.success(`${guests.length} billet(s) générés et téléchargés !`);
+      const response = await generateAllTickets();
+      const ct = response.headers?.['content-type'] || '';
+      if (ct.includes('application/zip')) {
+        const now = new Date().toISOString().slice(0, 10);
+        saveAs(response.data, `billets-mariage-blinda-elvis-${now}.zip`);
+        toast.success(`${guests.length} billet(s) générés et téléchargés !`);
+      } else {
+        let msg = 'Erreur lors de la génération';
+        try { const t = await response.data.text(); msg = JSON.parse(t).error || msg; } catch {}
+        toast.error(msg);
+      }
     } catch (err) {
-      toast.error(extractError(err, 'Erreur lors de la génération'));
+      toast.error(await parseBlobError(err, 'Erreur lors de la génération'));
     } finally { setGeneratingAll(false); }
   };
 
@@ -277,9 +306,8 @@ export default function TicketGenerator() {
                 className="relative select-none rounded-2xl overflow-hidden border-2 border-dashed border-gold-wed/40 cursor-crosshair shadow-lg"
                 onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}
                 onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp}
-                style={{ maxHeight: '60vh' }}
               >
-                <img src={template} alt="Template" className="w-full h-full object-contain pointer-events-none" draggable={false} />
+                <img src={template} alt="Template" className="w-full h-auto block pointer-events-none" draggable={false} />
                 {displayRect && (
                   <div
                     className="absolute border-2 border-gold-wed pointer-events-none"

@@ -140,30 +140,8 @@ blinda-et-elvis/
 ├── 📄 index.html                # Point d'entrée HTML (Google Fonts)
 ├── 📄 .env                      # Variables d'environnement (NON versionné)
 ├── 📄 .env.example              # Modèle de configuration
-├── 📄 vercel.json               # Configuration déploiement Vercel
 │
-├── 📁 api/                      # ⚡ Vercel Serverless Functions (production)
-│   ├── 📄 _db.js                # Pool PostgreSQL partagé
-│   ├── 📄 _auth.js              # Middleware d'authentification
-│   ├── 📄 rsvp.js               # POST /api/rsvp (public)
-│   ├── 📄 count.js              # GET /api/count (public)
-│   ├── 📁 admin/
-│   │   ├── 📄 login.js          # POST /api/admin/login
-│   │   └── 📄 verify.js         # GET /api/admin/verify
-│   ├── 📁 reservations/
-│   │   ├── 📄 index.js          # GET /api/reservations (liste)
-│   │   ├── 📄 [id].js           # DELETE /api/reservations/:id
-│   │   └── 📁 export/
-│   │       └── 📄 excel.js      # GET /api/reservations/export/excel
-│   └── 📁 tickets/
-│       ├── 📄 upload.js         # POST /api/tickets/upload (base64)
-│       ├── 📄 config.js         # GET/POST /api/tickets/config
-│       ├── 📄 template.js       # GET /api/tickets/template (image)
-│       ├── 📄 generate-all.js   # GET /api/tickets/generate-all (ZIP)
-│       └── 📁 generate/
-│           └── 📄 [id].js       # GET /api/tickets/generate/:id (PDF)
-│
-├── 📁 server/                   # 🖥️ Express local dev (développement uniquement)
+├── 📁 server/                   # Backend Express (CommonJS)
 │   ├── 📄 index.js              # Serveur principal, routes, auth middleware
 │   ├── 📄 db.js                 # Pool PostgreSQL + initialisation table
 │   └── 📁 routes/
@@ -255,75 +233,6 @@ NODE_ENV=development
 ```
 
 > ⚠️ **Important :** Ne jamais commiter le fichier `.env` dans git. Il est déjà dans `.gitignore`.
-
----
-
-## ☁️ Déploiement sur Vercel
-
-### Architecture de déploiement
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      vercel.app (production)                    │
-│                                                                 │
-│  ┌─────────────────────┐    ┌──────────────────────────────┐   │
-│  │  dist/ (React SPA)  │    │   api/ (Serverless Functions) │   │
-│  │  Fichiers statiques │    │   Node.js — connexion à Neon  │   │
-│  └─────────────────────┘    └──────────────────────────────┘   │
-│                                                                 │
-│  • /              → index.html (SPA)                           │
-│  │  /admin        → index.html (React Router)                  │
-│  └─────────────────────────────────────────────────────────────│
-│  • /api/*         → Serverless Functions                       │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-> ⚠️ **Important :** Vercel ne peut pas faire tourner un serveur Express classique.  
-> Ce projet utilise des **Vercel Serverless Functions** dans `api/` pour la production,  
-> et garde l'Express dans `server/` uniquement pour le développement local.
-
-### Étapes de déploiement
-
-#### 1. Pousser sur GitHub
-
-```bash
-git add .
-git commit -m "feat: Blinda & Elvis wedding website"
-git push origin main
-```
-
-#### 2. Importer dans Vercel
-
-1. Aller sur [vercel.com](https://vercel.com) → **New Project**
-2. Importer le dépôt GitHub
-3. Framework : **Vite** (détecté automatiquement)
-4. Build Command : `npm run build`
-5. Output Directory : `dist`
-
-#### 3. Variables d'environnement sur Vercel
-
-Dans **Settings → Environment Variables**, ajouter :
-
-| Variable | Valeur |
-|---|---|
-| `DATABASE_URL` | `postgresql://neondb_owner:...@.../neondb?sslmode=require` |
-| `ADMIN_PASSWORD` | `BlindaElvis2026` |
-
-> Le `PORT` n'est pas nécessaire sur Vercel.
-
-#### 4. Déployer
-
-Cliquer sur **Deploy** — Vercel build le frontend et configure les fonctions automatiquement.
-
-### Différences local vs Vercel
-
-| Fonctionnalité | Local (Express) | Vercel (Serverless) |
-|---|---|---|
-| Upload template | Sauvegardé dans `public/uploads/` | Sauvegardé en base64 dans PostgreSQL |
-| Affichage template | URL directe `/uploads/...` | Via API authentifiée `/api/tickets/template` |
-| Réservations | PostgreSQL (Neon) | PostgreSQL (Neon) |
-| PDF génération | pdf-lib (filesystem) | pdf-lib (in-memory) |
-| ZIP billets | jszip | jszip |
 
 ---
 

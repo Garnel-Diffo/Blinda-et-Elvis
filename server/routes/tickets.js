@@ -50,7 +50,7 @@ router.post('/upload', (req, res) => {
 });
 
 // GET config
-router.get('/config', (req, res) => {
+router.get('/config', (_req, res) => {
   const cfg = getConfig();
   if (!cfg) return res.json({});
   const tplPath = cfg.templateFile ? path.join(uploadsDir, cfg.templateFile) : null;
@@ -68,7 +68,7 @@ router.post('/config', (req, res) => {
 });
 
 // GET template image (authenticated, served from filesystem)
-router.get('/template', (req, res) => {
+router.get('/template', (_req, res) => {
   const cfg = getConfig();
   if (!cfg?.templateFile) return res.status(404).json({ error: 'Template non trouvé' });
   const tplPath = path.join(uploadsDir, cfg.templateFile);
@@ -102,7 +102,7 @@ router.get('/generate/:id', async (req, res) => {
 });
 
 // GET generate all tickets as ZIP
-router.get('/generate-all', async (req, res) => {
+router.get('/generate-all', async (_req, res) => {
   try {
     const cfg = getConfig();
     if (!cfg?.nameRect || !cfg?.templateFile) {
@@ -138,30 +138,43 @@ router.get('/generate-all', async (req, res) => {
 });
 
 async function buildPDFFromFile(person, cfg, tplPath) {
-  const { nameRect, fontSize = 32, fontColor = '#000000', templateFile } = cfg;
+  const { nameRect, fontSize = 32, fontColor = '#000000' } = cfg;
+  if (!nameRect) throw new Error('Zone de nom non configurée');
+
+  const { xPercent, yPercent, widthPercent, heightPercent } = nameRect;
+  if (xPercent == null || yPercent == null) throw new Error('Coordonnées invalides');
+
   const imgBytes = fs.readFileSync(tplPath);
   const pdfDoc = await PDFDocument.create();
   const ext = path.extname(tplPath).toLowerCase();
-  const img = ext === '.png' ? await pdfDoc.embedPng(imgBytes) : await pdfDoc.embedJpg(imgBytes);
+
+  let img;
+  try {
+    img = ext === '.png' ? await pdfDoc.embedPng(imgBytes) : await pdfDoc.embedJpg(imgBytes);
+  } catch (e) {
+    throw new Error(`Embed image: ${e.message}`);
+  }
+
   const { width: imgW, height: imgH } = img;
   const page = pdfDoc.addPage([imgW, imgH]);
   page.drawImage(img, { x: 0, y: 0, width: imgW, height: imgH });
 
   const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const fullName = `${person.prenom} ${person.nom}`;
-  const rectX = nameRect.xPercent * imgW;
-  const rectW = nameRect.widthPercent * imgW;
-  const rectH = nameRect.heightPercent * imgH;
-  const rectYtop = nameRect.yPercent * imgH;
-  const fs2 = Math.min(fontSize, rectH * 0.6);
+  const rectX = xPercent * imgW;
+  const rectW = widthPercent * imgW;
+  const rectH = heightPercent * imgH;
+  const rectYtop = yPercent * imgH;
+
+  const fs2 = Math.max(8, Math.min(Number(fontSize) || 32, rectH * 0.65));
   const tw = font.widthOfTextAtSize(fullName, fs2);
   const pdfX = Math.max(rectX, rectX + (rectW - tw) / 2);
-  const pdfY = imgH - rectYtop - rectH / 2 - fs2 / 3;
+  const pdfY = Math.max(2, Math.min(imgH - rectYtop - rectH / 2 - fs2 / 3, imgH - fs2 - 2));
 
-  const hex = fontColor.replace('#', '');
-  const r = parseInt(hex.slice(0, 2), 16) / 255;
-  const g = parseInt(hex.slice(2, 4), 16) / 255;
-  const b = parseInt(hex.slice(4, 6), 16) / 255;
+  const hex = (fontColor || '#000000').replace('#', '').padEnd(6, '0');
+  const r = Math.max(0, Math.min(1, parseInt(hex.slice(0, 2), 16) / 255));
+  const g = Math.max(0, Math.min(1, parseInt(hex.slice(2, 4), 16) / 255));
+  const b = Math.max(0, Math.min(1, parseInt(hex.slice(4, 6), 16) / 255));
   page.drawText(fullName, { x: pdfX, y: pdfY, size: fs2, font, color: rgb(r, g, b) });
   return pdfDoc.save();
 }
