@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+public/uploads/*.jpg
+public/uploads/*.jpeg
+public/uploads/*.png
+public/uploads/*.pdf
+public/uploads/*.zip
+public/uploads/ticket-config.json
+*.log
