@@ -49,11 +49,22 @@ async function buildPDF(person, config) {
   const rectH = heightPercent * imgH;
   const rectYtop = yPercent * imgH;
 
-  const fs = Math.max(8, Math.min(fontSize, rectH * 0.65));
+  // Adapter la taille de police à la hauteur du cadre (max 90%)
+  const fs = Math.max(8, Math.min(fontSize, rectH * 0.9));
   const tw = font.widthOfTextAtSize(fullName, fs);
-  const pdfX = Math.max(rectX, rectX + (rectW - tw) / 2);
+
+  // X : centrer horizontalement dans le cadre, sans dépasser les bords
+  const pdfX = Math.max(
+    rectX,
+    Math.min(rectX + (rectW - tw) / 2, imgW - tw - 2)
+  );
+
+  // Y : pdf-lib a l'origine en bas-gauche (Y monte vers le haut)
+  // Le centre du cadre en coords PDF = imgH - rectYtop - rectH/2
+  // La baseline du texte est ≈ 0.35*fs en dessous du centre visuel des majuscules
+  const rectCenterPdf = imgH - rectYtop - rectH / 2;
   const pdfY = Math.max(2, Math.min(
-    imgH - rectYtop - rectH / 2 - fs / 3,
+    rectCenterPdf - fs * 0.35,
     imgH - fs - 2
   ));
 

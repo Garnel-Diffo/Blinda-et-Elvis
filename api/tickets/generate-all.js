@@ -45,10 +45,19 @@ async function buildPDF(person, config) {
   const rectH = heightPercent * imgH;
   const rectYtop = yPercent * imgH;
 
-  const fs = Math.max(8, Math.min(fontSize, rectH * 0.65));
+  const fs = Math.max(8, Math.min(fontSize, rectH * 0.9));
   const tw = font.widthOfTextAtSize(fullName, fs);
-  const pdfX = Math.max(rectX, rectX + (rectW - tw) / 2);
-  const pdfY = Math.max(2, Math.min(imgH - rectYtop - rectH / 2 - fs / 3, imgH - fs - 2));
+
+  const pdfX = Math.max(
+    rectX,
+    Math.min(rectX + (rectW - tw) / 2, imgW - tw - 2)
+  );
+
+  const rectCenterPdf = imgH - rectYtop - rectH / 2;
+  const pdfY = Math.max(2, Math.min(
+    rectCenterPdf - fs * 0.35,
+    imgH - fs - 2
+  ));
 
   const hex = fontColor.replace('#', '').padEnd(6, '0');
   const r = Math.max(0, Math.min(1, parseInt(hex.slice(0, 2), 16) / 255));

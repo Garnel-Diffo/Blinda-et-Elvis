@@ -96,6 +96,10 @@ export default function TicketGenerator() {
 
   const containerRef = useRef(null);
   const fileInputRef = useRef(null);
+  const imgRef = useRef(null);
+  // Taille naturelle de l'image du template (pour calculer l'échelle du prévisualisation)
+  const [imgNatW, setImgNatW] = useState(1);
+  const [imgNatH, setImgNatH] = useState(1);
 
   useEffect(() => {
     loadStatus();
@@ -472,39 +476,60 @@ export default function TicketGenerator() {
                 onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp}
               >
                 <img
+                  ref={imgRef}
                   src={template}
                   alt="Template"
                   className="w-full h-auto block pointer-events-none"
                   draggable={false}
+                  onLoad={() => {
+                    setImgNatW(imgRef.current?.naturalWidth || 1);
+                    setImgNatH(imgRef.current?.naturalHeight || 1);
+                  }}
                 />
-                {displayRect && (
-                  <div
-                    className="absolute border-2 border-gold-wed pointer-events-none"
-                    style={{
-                      left: `${displayRect.xPercent * 100}%`,
-                      top: `${displayRect.yPercent * 100}%`,
-                      width: `${displayRect.widthPercent * 100}%`,
-                      height: `${displayRect.heightPercent * 100}%`,
-                      boxShadow: '0 0 0 9999px rgba(0,0,0,0.35)',
-                    }}
-                  >
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span
-                        className="font-body font-bold text-center px-1 truncate"
-                        style={{
-                          color: fontColor,
-                          fontSize: `clamp(10px, ${displayRect.heightPercent * 50}vw, 28px)`,
-                          textShadow: fontColor === '#FFFFFF' ? '0 1px 3px rgba(0,0,0,0.5)' : 'none',
-                        }}
-                      >
-                        Prénom NOM
-                      </span>
+                {displayRect && (() => {
+                  // Échelle affichage vs image originale pour reproduire fidèlement le PDF
+                  const containerW = containerRef.current?.clientWidth || imgNatW || 1;
+                  const scale = imgNatW > 0 ? containerW / imgNatW : 1;
+                  // Taille de police à l'échelle de l'affichage (= ce qui sera dans le PDF)
+                  const previewFontPx = Math.max(6, fontSize * scale);
+                  // Limiter si la police dépasse la hauteur du cadre affiché
+                  const rectDisplayH = displayRect.heightPercent * (containerRef.current?.clientHeight || imgNatH || 1);
+                  const clampedFontPx = Math.min(previewFontPx, rectDisplayH * 0.9);
+
+                  return (
+                    <div
+                      className="absolute border-2 border-gold-wed pointer-events-none"
+                      style={{
+                        left: `${displayRect.xPercent * 100}%`,
+                        top: `${displayRect.yPercent * 100}%`,
+                        width: `${displayRect.widthPercent * 100}%`,
+                        height: `${displayRect.heightPercent * 100}%`,
+                        boxShadow: '0 0 0 9999px rgba(0,0,0,0.4)',
+                      }}
+                    >
+                      {/* Texte centré dans le cadre — aperçu fidèle du PDF */}
+                      <div className="absolute inset-0 flex items-center justify-center overflow-hidden px-1">
+                        <span
+                          className="font-body font-bold text-center whitespace-nowrap"
+                          style={{
+                            color: fontColor,
+                            fontSize: `${clampedFontPx}px`,
+                            lineHeight: 1,
+                            textShadow: fontColor === '#FFFFFF'
+                              ? '0 1px 4px rgba(0,0,0,0.7)'
+                              : '0 1px 2px rgba(255,255,255,0.5)',
+                          }}
+                        >
+                          Prénom NOM
+                        </span>
+                      </div>
+                      {/* Poignées de coin */}
+                      {['top-0 left-0', 'top-0 right-0', 'bottom-0 left-0', 'bottom-0 right-0'].map(p => (
+                        <div key={p} className={`absolute w-3 h-3 bg-gold-wed rounded-full -translate-x-1/2 -translate-y-1/2 ${p}`} />
+                      ))}
                     </div>
-                    {['top-0 left-0', 'top-0 right-0', 'bottom-0 left-0', 'bottom-0 right-0'].map(p => (
-                      <div key={p} className={`absolute w-3 h-3 bg-gold-wed rounded-full -translate-x-1/2 -translate-y-1/2 ${p}`} />
-                    ))}
-                  </div>
-                )}
+                  );
+                })()}
                 {!displayRect && !drawing && (
                   <div className="absolute inset-0 flex items-center justify-center bg-wed-dark/10">
                     <div className="bg-white/90 backdrop-blur-sm rounded-xl px-4 py-3 text-center shadow-lg">
