@@ -40,6 +40,7 @@ export const uploadTemplate = (data) =>
 
 export const getTicketTemplate = () =>
   adminApi.get('/tickets/template', { responseType: 'blob' });
+export const getTicketStatus = () => adminApi.get('/tickets/status');
 
 export const getTicketConfig = () => adminApi.get('/tickets/config');
 export const saveTicketConfig = (data) => adminApi.post('/tickets/config', data);

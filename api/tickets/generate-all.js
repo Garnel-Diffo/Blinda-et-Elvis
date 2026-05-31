@@ -48,10 +48,7 @@ async function buildPDF(person, config) {
   const fs = Math.max(8, Math.min(fontSize, rectH * 0.65));
   const tw = font.widthOfTextAtSize(fullName, fs);
   const pdfX = Math.max(rectX, rectX + (rectW - tw) / 2);
-  const pdfY = Math.max(2, Math.min(
-    imgH - rectYtop - rectH / 2 - fs / 3,
-    imgH - fs - 2
-  ));
+  const pdfY = Math.max(2, Math.min(imgH - rectYtop - rectH / 2 - fs / 3, imgH - fs - 2));
 
   const hex = fontColor.replace('#', '').padEnd(6, '0');
   const r = Math.max(0, Math.min(1, parseInt(hex.slice(0, 2), 16) / 255));
@@ -73,21 +70,20 @@ module.exports = async function handler(req, res) {
       query('SELECT * FROM reservations ORDER BY nom, prenom'),
     ]);
 
-    // Valider la configuration avant de commencer
-    if (!cfgRes.rows.length || !cfgRes.rows[0].template_data) {
-      return res.status(400).json({
-        error: 'Aucun template configuré. Uploadez un template et sauvegardez la configuration dans l\'admin en ligne.',
-      });
+    if (!cfgRes.rows.length) {
+      return res.status(400).json({ error: 'Configuration introuvable. Configurez le template dans l\'espace admin.' });
     }
 
     const config = cfgRes.rows[0];
 
+    if (!config.template_data) {
+      return res.status(400).json({ error: 'Template non uploadé. Uploadez un template dans l\'espace admin.' });
+    }
     if (!config.name_rect) {
       return res.status(400).json({
-        error: 'Zone de nom non définie. Dessinez le cadre sur le template et sauvegardez la configuration.',
+        error: 'Zone du nom non définie. Dans l\'espace admin, dessinez le cadre sur le template puis cliquez "Sauvegarder la configuration".',
       });
     }
-
     if (!guestsRes.rows.length) {
       return res.status(400).json({ error: 'Aucun invité dans la base de données.' });
     }
@@ -102,13 +98,12 @@ module.exports = async function handler(req, res) {
         const pdfBytes = await buildPDF(person, config);
         const fn = `billet-${person.prenom}-${person.nom}.pdf`
           .normalize('NFD').replace(/[̀-ͯ]/g, '')
-          .replace(/[^a-z0-9-_.]/gi, '-')
-          .replace(/-+/g, '-');
+          .replace(/[^a-z0-9-_.]/gi, '-').replace(/-+/g, '-');
         folder.file(fn, Buffer.from(pdfBytes));
         count++;
       } catch (e) {
-        console.error(`[generate-all] Skip ${person.prenom} ${person.nom}: ${e.message}`);
         errors.push(`${person.prenom} ${person.nom}: ${e.message}`);
+        console.error(`[generate-all] Skip ${person.prenom}:`, e.message);
       }
     }
 
@@ -129,7 +124,7 @@ module.exports = async function handler(req, res) {
     res.setHeader('Content-Disposition', `attachment; filename="billets-mariage-blinda-elvis-${now}.zip"`);
     res.send(zipBuffer);
   } catch (err) {
-    console.error('[generate-all] Fatal error:', err.message);
+    console.error('[generate-all] Fatal:', err.message);
     if (!res.headersSent) {
       res.status(500).json({ error: err.message || 'Erreur de génération' });
     }
