@@ -97,6 +97,13 @@
     border: 1px solid rgba(245,158,11,0.3);
   }
 
+  .badge-sage {
+    @apply inline-flex items-center gap-2 px-4 py-1.5 rounded-full font-body text-xs uppercase tracking-[0.25em];
+    background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05));
+    color: #059669;
+    border: 1px solid rgba(16,185,129,0.3);
+  }
+
   /* Gradient text */
   .text-gradient-gold {
     background: linear-gradient(135deg, #F59E0B, #D97706, #FBBF24);
@@ -107,6 +114,13 @@
 
   .text-gradient-sky {
     background: linear-gradient(135deg, #0EA5E9, #0284C7, #38BDF8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-sage {
+    background: linear-gradient(135deg, #10B981, #059669, #34D399);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;

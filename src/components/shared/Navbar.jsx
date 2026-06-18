@@ -5,6 +5,7 @@ import { Link, useLocation } from 'react-router-dom';
 
 const NAV_LINKS = [
   { href: '#accueil', label: 'Accueil' },
+  { href: '#dot', label: 'La Dot' },
   { href: '#programme', label: 'Programme' },
   { href: '#galerie', label: 'Galerie' },
   { href: '#code-vestimentaire', label: 'Pagne' },

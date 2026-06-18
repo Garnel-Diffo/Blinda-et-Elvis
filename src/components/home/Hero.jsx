@@ -114,7 +114,7 @@ export default function Hero() {
   const bgY = useTransform(scrollY, [0, 700], ['0%', '20%']);
 
   const scrollToNext = () =>
-    document.getElementById('programme')?.scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('dot')?.scrollIntoView({ behavior: 'smooth' });
 
   return (
     <section

@@ -25,7 +25,7 @@ export default function Footer() {
           <div className="text-center">
             <h4 className="font-heading text-lg text-white/90 mb-4">Navigation</h4>
             <ul className="space-y-2 text-sm font-body">
-              {['#accueil', '#programme', '#galerie', '#code-vestimentaire', '#rsvp'].map(
+              {['#accueil', '#dot', '#programme', '#galerie', '#code-vestimentaire', '#rsvp'].map(
                 (href) => (
                   <li key={href}>
                     <a

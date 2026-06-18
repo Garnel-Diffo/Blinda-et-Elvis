@@ -1,6 +1,7 @@
 import Navbar from '../components/shared/Navbar';
 import Footer from '../components/shared/Footer';
 import Hero from '../components/home/Hero';
+import Dot from '../components/home/Dot';
 import Program from '../components/home/Program';
 import Gallery from '../components/home/Gallery';
 import DressCode from '../components/home/DressCode';
@@ -12,6 +13,7 @@ export default function HomePage() {
       <Navbar />
       <main>
         <Hero />
+        <Dot />
         <Program />
         <Gallery />
         <DressCode />
