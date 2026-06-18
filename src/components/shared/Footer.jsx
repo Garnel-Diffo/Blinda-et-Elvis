@@ -25,8 +25,15 @@ export default function Footer() {
           <div className="text-center">
             <h4 className="font-heading text-lg text-white/90 mb-4">Navigation</h4>
             <ul className="space-y-2 text-sm font-body">
-              {['#accueil', '#dot', '#programme', '#galerie', '#code-vestimentaire', '#rsvp'].map(
-                (href) => (
+              {[
+                { href: '#accueil', label: 'Accueil' },
+                { href: '#dot', label: 'La Dot' },
+                { href: '#programme', label: 'Programme' },
+                { href: '#galerie', label: 'Galerie' },
+                { href: '#code-vestimentaire', label: 'Code vestimentaire' },
+                { href: '#rsvp', label: 'Réserver ma place' },
+              ].map(
+                ({ href, label }) => (
                   <li key={href}>
                     <a
                       href={href}
@@ -34,9 +41,9 @@ export default function Footer() {
                         e.preventDefault();
                         document.querySelector(href)?.scrollIntoView({ behavior: 'smooth' });
                       }}
-                      className="text-white/60 hover:text-gold-wed transition-colors capitalize"
+                      className="text-white/60 hover:text-gold-wed transition-colors"
                     >
-                      {href.slice(1).replace(/-/g, ' ')}
+                      {label}
                     </a>
                   </li>
                 )

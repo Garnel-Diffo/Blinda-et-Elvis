@@ -9,7 +9,7 @@ const NAV_LINKS = [
   { href: '#programme', label: 'Programme' },
   { href: '#galerie', label: 'Galerie' },
   { href: '#code-vestimentaire', label: 'Pagne' },
-  { href: '#rsvp', label: 'RSVP' },
+  { href: '#rsvp', label: 'Réserver ma place' },
 ];
 
 export default function Navbar() {
@@ -80,7 +80,7 @@ export default function Navbar() {
           </a>
 
           {/* Desktop nav */}
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden lg:flex items-center gap-5">
             {isHome && NAV_LINKS.map(link => {
               const id = link.href.slice(1);
               const isActive = active === id;
@@ -121,7 +121,7 @@ export default function Navbar() {
 
           {/* Mobile button */}
           <button
-            className="md:hidden p-2 rounded-lg transition-all duration-200"
+            className="lg:hidden p-2 rounded-lg transition-all duration-200"
             style={{ color: scrolled ? '#374151' : 'white' }}
             onClick={() => setOpen(p => !p)}
             aria-label="Menu"
@@ -145,7 +145,7 @@ export default function Navbar() {
       <AnimatePresence>
         {open && (
           <motion.div
-            className="fixed inset-0 z-40 md:hidden"
+            className="fixed inset-0 z-40 lg:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
