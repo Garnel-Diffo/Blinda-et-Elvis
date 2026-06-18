@@ -1,5 +1,7 @@
-import { motion } from 'framer-motion';
+import { useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
+import { ZoomIn, X } from 'lucide-react';
 import pagneOfficiel from '../../assets/images/pagne-officiel.jpeg';
 
 const COLORS = [
@@ -94,9 +96,61 @@ function ColorCard({ color, inView }) {
   );
 }
 
+function PagneLightBox({ onClose }) {
+  const handleKeyDown = useCallback((e) => { if (e.key === 'Escape') onClose(); }, [onClose]);
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        className="fixed inset-0 z-[100] flex items-center justify-center"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onKeyDown={handleKeyDown}
+        tabIndex={-1}
+        ref={(el) => el?.focus()}
+      >
+        <motion.div className="absolute inset-0 bg-wed-dark/90" onClick={onClose} />
+
+        <div className="relative z-10 w-full max-w-2xl px-4 flex flex-col items-center">
+          <button
+            onClick={onClose}
+            className="absolute -top-12 right-4 text-white/70 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10"
+          >
+            <X size={28} />
+          </button>
+
+          <motion.div
+            className="relative rounded-2xl overflow-hidden shadow-2xl max-h-[85vh] w-full flex items-center justify-center bg-black"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.3 }}
+          >
+            <img
+              src={pagneOfficiel}
+              alt="Pagne officiel du mariage Blinda & Elvis"
+              className="max-h-[85vh] w-auto max-w-full object-contain"
+            />
+          </motion.div>
+
+          <motion.p
+            className="mt-4 font-heading italic text-white/80 text-lg text-center"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            Pagne Officiel · Blinda &amp; Elvis 💍
+          </motion.p>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
 export default function DressCode() {
   const [ref, inView] = useInView({ threshold: 0.1, triggerOnce: true });
   const [ref2, inView2] = useInView({ threshold: 0.1, triggerOnce: true });
+  const [zoomOpen, setZoomOpen] = useState(false);
 
   return (
     <section id="code-vestimentaire" className="py-24 px-4 relative overflow-hidden">
@@ -219,14 +273,16 @@ export default function DressCode() {
             </motion.div>
           </motion.div>
 
-          {/* Pagne photo — single, beautiful */}
+          {/* Pagne photo — affichée intégralement (prix et contacts visibles), cliquable pour zoomer */}
           <motion.div
+            className="cursor-pointer group"
             initial={{ opacity: 0, x: 50, scale: 0.95 }}
             animate={inView2 ? { opacity: 1, x: 0, scale: 1 } : {}}
             transition={{ duration: 0.9, delay: 0.2, type: 'spring', stiffness: 100 }}
+            onClick={() => setZoomOpen(true)}
           >
             <div
-              className="rounded-3xl overflow-hidden shadow-2xl photo-hover"
+              className="rounded-3xl overflow-hidden shadow-2xl photo-hover bg-white"
               style={{
                 boxShadow: '0 30px 80px rgba(245,158,11,0.2), 0 0 0 4px rgba(245,158,11,0.2)',
               }}
@@ -234,11 +290,11 @@ export default function DressCode() {
               <img
                 src={pagneOfficiel}
                 alt="Pagne officiel du mariage Blinda & Elvis"
-                className="w-full h-[420px] object-cover"
+                className="w-full h-auto block transition-transform duration-700 group-hover:scale-[1.03]"
               />
               {/* Bottom label */}
               <div
-                className="px-6 py-4 text-center"
+                className="px-6 py-4 flex items-center justify-between gap-3 flex-wrap"
                 style={{
                   background: 'linear-gradient(135deg, rgba(245,158,11,0.9), rgba(217,119,6,0.9))',
                 }}
@@ -246,11 +302,16 @@ export default function DressCode() {
                 <p className="font-heading text-white text-xl italic">
                   Pagne Officiel · Blinda & Elvis 💍
                 </p>
+                <span className="inline-flex items-center gap-1.5 text-white/90 text-xs font-body uppercase tracking-widest">
+                  <ZoomIn size={14} /> Agrandir
+                </span>
               </div>
             </div>
           </motion.div>
         </div>
       </div>
+
+      {zoomOpen && <PagneLightBox onClose={() => setZoomOpen(false)} />}
     </section>
   );
 }

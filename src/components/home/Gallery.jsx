@@ -16,17 +16,17 @@ import couronne from '../../assets/images/couronne.jpeg';
 import saveTheDate from '../../assets/images/save-the-date.jpeg';
 
 const PHOTOS = [
-  { src: couronne, caption: 'Une couronne d\'amour ✨', span: 'col-span-2 row-span-2' },
-  { src: photo1, caption: 'Notre complicité 💙', span: '' },
-  { src: pagne1, caption: 'Les couleurs de notre bonheur 💛', span: '' },
-  { src: photo2, caption: 'Ensemble pour l\'éternité 🤍', span: '' },
-  { src: pagneDos, caption: 'Toujours l\'un pour l\'autre 🌿', span: '' },
-  { src: photo3, caption: 'Notre histoire d\'amour 💜', span: '' },
-  { src: pagne2, caption: 'La grâce et l\'élégance 💙', span: '' },
-  { src: joggingPied, caption: 'La complicité au quotidien ⚽', span: '' },
-  { src: joggingAssis, caption: 'Des moments simples et précieux 🌸', span: '' },
-  { src: bague, caption: 'La promesse d\'une vie 💍', span: '' },
-  { src: saveTheDate, caption: 'Save the Date · 20 Juin 2026 📅', span: 'col-span-2' },
+  { src: couronne, caption: 'Une couronne d\'amour ✨' },
+  { src: photo1, caption: 'Notre complicité 💙' },
+  { src: pagne1, caption: 'Les couleurs de notre bonheur 💛' },
+  { src: photo2, caption: 'Ensemble pour l\'éternité 🤍' },
+  { src: pagneDos, caption: 'Toujours l\'un pour l\'autre 🌿' },
+  { src: photo3, caption: 'Notre histoire d\'amour 💜' },
+  { src: pagne2, caption: 'La grâce et l\'élégance 💙' },
+  { src: joggingPied, caption: 'La complicité au quotidien ⚽' },
+  { src: joggingAssis, caption: 'Des moments simples et précieux 🌸' },
+  { src: bague, caption: 'La promesse d\'une vie 💍' },
+  { src: saveTheDate, caption: 'Save the Date · Toutes les infos clés 📅' },
 ];
 
 function LightBox({ photos, index, onClose, onPrev, onNext }) {
@@ -158,12 +158,12 @@ export default function Gallery() {
           </motion.span>
         </div>
 
-        {/* Masonry-style grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 auto-rows-[180px] md:auto-rows-[200px]">
+        {/* Mosaïque responsive — chaque photo garde ses proportions réelles, rien n'est coupé */}
+        <div className="columns-2 sm:columns-3 md:columns-4 gap-3 md:gap-4">
           {PHOTOS.map((photo, i) => (
             <motion.div
               key={i}
-              className={`relative group cursor-pointer overflow-hidden rounded-xl shadow-md hover:shadow-xl transition-all duration-300 ${photo.span || ''}`}
+              className="break-inside-avoid mb-3 md:mb-4 relative group cursor-pointer overflow-hidden rounded-xl shadow-md hover:shadow-xl transition-all duration-300"
               initial={{ opacity: 0, scale: 0.92 }}
               animate={inView ? { opacity: 1, scale: 1 } : {}}
               transition={{ duration: 0.5, delay: Math.min(i * 0.05, 0.5) }}
@@ -173,7 +173,7 @@ export default function Gallery() {
               <img
                 src={photo.src}
                 alt={photo.caption}
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                className="w-full h-auto block transition-transform duration-700 group-hover:scale-110"
                 loading="lazy"
               />
 
