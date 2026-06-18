@@ -238,59 +238,59 @@ export default function Dot() {
           />
         </div>
 
-        {/* Photos */}
-        <div ref={ref2} className="space-y-5">
+        {/* Photos — chaque image est affichée intégralement, selon ses proportions réelles (pas de recadrage) */}
+        <div ref={ref2}>
           {/* Featured photo */}
           <motion.div
-            className="relative cursor-pointer group"
+            className="relative max-w-[260px] sm:max-w-xs md:max-w-sm mx-auto mb-8 cursor-pointer group"
             initial={{ opacity: 0, y: 40, scale: 0.97 }}
             animate={inView2 ? { opacity: 1, y: 0, scale: 1 } : {}}
             transition={{ duration: 0.8, type: 'spring', stiffness: 100 }}
             onClick={() => openLightbox(0)}
           >
             <div
-              className="rounded-3xl overflow-hidden shadow-2xl photo-hover"
+              className="rounded-3xl overflow-hidden shadow-2xl photo-hover bg-white"
               style={{ boxShadow: '0 30px 80px rgba(16,185,129,0.2), 0 0 0 4px rgba(16,185,129,0.15)' }}
             >
               <img
                 src={FEATURED.src}
                 alt={FEATURED.caption}
-                className="w-full h-[360px] md:h-[460px] object-cover transition-transform duration-700 group-hover:scale-105"
+                className="w-full h-auto block transition-transform duration-700 group-hover:scale-105"
                 loading="lazy"
               />
               <div
-                className="px-6 py-4 flex items-center justify-between gap-3 flex-wrap"
+                className="px-5 py-3 flex items-center justify-between gap-2 flex-wrap"
                 style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.92), rgba(5,150,105,0.92))' }}
               >
-                <p className="font-heading text-white text-lg md:text-xl italic">
-                  Mariage Coutumier · Blinda &amp; Elvis 🌿
+                <p className="font-heading text-white text-sm md:text-base italic">
+                  Mariage Coutumier 🌿
                 </p>
-                <span className="inline-flex items-center gap-1.5 text-white/90 text-xs font-body uppercase tracking-widest">
-                  <ZoomIn size={14} /> Agrandir
+                <span className="inline-flex items-center gap-1.5 text-white/90 text-[10px] font-body uppercase tracking-widest">
+                  <ZoomIn size={12} /> Agrandir
                 </span>
               </div>
             </div>
 
             {/* Floating badge */}
             <motion.div
-              className="absolute top-5 left-5 inline-flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-sm"
+              className="absolute top-4 left-4 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full backdrop-blur-sm"
               style={{ background: 'rgba(255,255,255,0.92)', boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}
               animate={{ y: [0, -4, 0] }}
               transition={{ duration: 3, repeat: Infinity }}
             >
-              <Leaf size={14} className="text-sage" />
-              <span className="font-body text-xs font-bold uppercase tracking-wider text-wed-dark">
+              <Leaf size={13} className="text-sage" />
+              <span className="font-body text-[11px] font-bold uppercase tracking-wider text-wed-dark">
                 Babadjou · 13 Juin
               </span>
             </motion.div>
           </motion.div>
 
-          {/* Thumbnails grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 auto-rows-[180px] md:auto-rows-[200px]">
+          {/* Mosaïque responsive — chaque vignette garde son ratio naturel (CSS columns, pas de grid à hauteur fixe) */}
+          <div className="columns-2 sm:columns-3 md:columns-4 gap-3 md:gap-4">
             {thumbnails.map((photo, i) => (
               <motion.div
                 key={i}
-                className="relative group cursor-pointer overflow-hidden rounded-xl shadow-md hover:shadow-xl transition-all duration-300"
+                className="break-inside-avoid mb-3 md:mb-4 relative group cursor-pointer overflow-hidden rounded-xl shadow-md hover:shadow-xl transition-all duration-300"
                 initial={{ opacity: 0, scale: 0.92 }}
                 animate={inView2 ? { opacity: 1, scale: 1 } : {}}
                 transition={{ duration: 0.5, delay: 0.2 + i * 0.1 }}
@@ -300,11 +300,11 @@ export default function Dot() {
                 <img
                   src={photo.src}
                   alt={photo.caption}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  className="w-full h-auto block transition-transform duration-700 group-hover:scale-110"
                   loading="lazy"
                 />
 
-                <div className="absolute inset-0 bg-gradient-to-t from-wed-dark/70 via-wed-dark/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-end p-4">
+                <div className="absolute inset-0 bg-gradient-to-t from-wed-dark/75 via-wed-dark/15 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-end p-4">
                   <ZoomIn size={22} className="text-white mb-2 transform -translate-y-2 group-hover:translate-y-0 transition-transform duration-300" />
                   <p className="text-white text-xs font-heading italic text-center leading-tight transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 delay-75">
                     {photo.caption}
